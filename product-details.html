@@ -51,7 +51,7 @@
     list.forEach(function (r) { if (r.quantity > 0 && NS.freshness(r.last_updated) !== 'unverified' && (low === null || Number(r.price) < low)) low = Number(r.price); });
     $('out').innerHTML = list.length ? list.map(function (r) {
       return NS.resultCard(r, { pos: pos, lowest: list.length > 1 && r.quantity > 0 && Number(r.price) === low });
-    }).join('') : '<div class="card p-4 text-center">' + NS.esc(NS.t('no_results')) + '</div>';
+    }).join('') : '<div class="card p-4 text-center"><div class="fw-semibold">No shop has published a confirmed listing for this product yet.</div><div class="small text-muted mt-1">This is a catalogue entry. Ask a shop owner to add the price and stock from Manage Products.</div></div>';
   }
   drawHead();
   var r = await NS.searchInventory({ productId: id });

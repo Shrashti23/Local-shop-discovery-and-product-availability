@@ -39,14 +39,14 @@
     if (pos) list.sort(function (a, b) { var x = NS.distKm(pos, a), y = NS.distKm(pos, b); return (x === null ? 1e9 : x) - (y === null ? 1e9 : y); });
     $('out').innerHTML = list.length ? list.map(function (s) {
       var d = pos ? NS.distKm(pos, s) : null;
-      return '<div class="col-md-6"><div class="card card-hover p-3 h-100"><a class="fw-semibold text-decoration-none" href="shop-details.html?id=' + NS.esc(s.id) + '">' + NS.esc(s.shop_name) + ' <span class="badge bg-success">&#10003;</span></a>' +
+      return '<div class="col-md-6"><div class="card card-hover p-3 h-100"><a class="fw-semibold text-decoration-none" href="shop-details.html?id=' + NS.esc(s.id) + '">' + NS.esc(s.shop_name) + ' <span class="badge ' + (s.owner_id ? 'bg-success' : 'bg-secondary') + '">' + (s.owner_id ? 'Owner verified' : 'Public listing') + '</span></a>' +
         '<div class="small text-muted">' + NS.esc(s.category_focus || '') + '</div><div class="small">' + NS.esc(s.address) + ', ' + NS.esc(s.city) + ' ' + NS.esc(s.pincode) + '</div>' +
         '<div class="small">&#128337; ' + NS.esc(s.opening_hours) + (d !== null ? ' &middot; <strong>' + d.toFixed(1) + ' ' + NS.esc(NS.t('km_away')) + '</strong>' : '') + '</div>' +
         '<div class="mt-2"><a class="btn btn-sm btn-ns" href="tel:+91' + NS.esc(NS.normPhone(s.phone)) + '">&#128222; ' + NS.esc(NS.t('call')) + '</a> ' +
         '<a class="btn btn-sm btn-outline-ns" href="shop-details.html?id=' + NS.esc(s.id) + '">' + NS.esc(NS.t('view_shop')) + '</a></div></div></div>';
     }).join('') : '<div class="col-12"><div class="card p-4 text-center">' + NS.esc(NS.t('no_results')) + '</div></div>';
   }
-  var r = await NS.sb.from('shops').select('id,shop_name,category_focus,address,city,pincode,phone,opening_hours,latitude,longitude').eq('verification_status', 'approved').order('shop_name').limit(500);
+  var r = await NS.sb.from('shops').select('id,owner_id,shop_name,category_focus,address,city,pincode,phone,opening_hours,latitude,longitude').eq('verification_status', 'approved').order('shop_name').limit(500);
   if (r.error) NS.flash($('msg'), 'danger', NS.errMsg(r.error));
   rows = r.data || []; draw();
   $('sq').addEventListener('input', draw); $('city').addEventListener('change', draw);

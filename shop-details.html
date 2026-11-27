@@ -35,12 +35,12 @@
   var id = NS.param('id');
   var $ = function (i) { return document.getElementById(i); };
   if (!NS.isUuid(id)) { $('head').remove(); return NS.flash($('msg'), 'danger', 'Invalid shop link.'); }
-  var sr = await NS.sb.from('shops').select('id,shop_name,category_focus,address,city,district,pincode,phone,opening_hours,latitude,longitude,verification_status').eq('id', id).eq('verification_status', 'approved').maybeSingle();
+  var sr = await NS.sb.from('shops').select('id,owner_id,shop_name,category_focus,address,city,district,pincode,phone,opening_hours,latitude,longitude,verification_status').eq('id', id).eq('verification_status', 'approved').maybeSingle();
   if (sr.error || !sr.data) { $('head').remove(); return NS.flash($('msg'), 'warning', 'Shop not found or not yet approved.'); }
   var s = sr.data, inv = [], reviews = [];
   function drawHead() {
     var h = $('head'); h.classList.remove('skeleton');
-    h.innerHTML = '<h1 class="h4">' + NS.esc(s.shop_name) + ' <span class="badge bg-success">&#10003; Verified</span></h1>' +
+    h.innerHTML = '<h1 class="h4">' + NS.esc(s.shop_name) + ' <span class="badge ' + (s.owner_id ? 'bg-success' : 'bg-secondary') + '">' + (s.owner_id ? 'Owner verified' : 'Public listing - not claimed') + '</span></h1>' +
       '<div class="text-muted">' + NS.esc(s.category_focus || '') + '</div>' +
       '<div class="mt-2">&#128205; ' + NS.esc(s.address) + ', ' + NS.esc(s.city) + ', ' + NS.esc(s.district) + ' - ' + NS.esc(s.pincode) + '</div>' +
       '<div>&#128337; ' + NS.esc(s.opening_hours) + '</div>' +

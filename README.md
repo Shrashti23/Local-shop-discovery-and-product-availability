@@ -7,7 +7,7 @@ directly to **Supabase** (Postgres + Auth + Storage). No server of your own to r
 
 ## 1. Setup (about 10 minutes)
 
-1. **Supabase > SQL Editor**: paste all of `schema.sql` > Run. Then paste `seed.sql` > Run (11 fictional "Demo" shops, 20 products, 40 stock rows).
+1. **Supabase > SQL Editor**: paste all of `schema.sql` > Run. For fictional demo content, run `seed.sql`. For the real-business starter directory, run `real_data.sql` instead (10 public-directory shop records + 11 catalogue products; no unverified prices or stock quantities are inserted).
 2. **Supabase > Authentication > Providers > Email**:
    - Demo/college: turn **"Confirm email" OFF** so sign-up logs you straight in. Production: leave ON.
    - Set **minimum password length to 8**.
@@ -38,7 +38,8 @@ Deploy: drag this folder onto Netlify / Vercel / Cloudflare Pages, or push to Gi
 |---|---|
 | `index.html` | Home: search, categories, recent stock, shops |
 | `search.html` | Product search: city / PIN / category / max price / in-stock / sort by price, distance or freshness |
-| `product-details.html` | One product across all shops (price comparison) |
+| `product-details.html` | Product information and confirmed shop listings / price comparison |
+| `catalogue.html` | Browse shared product catalogue, including products without confirmed shop stock |
 | `shop-details.html` | Shop profile, map, inventory, reviews, enquiry, report |
 | `shops.html` | Shop directory |
 | `login.html`, `customer-register.html`, `shop-register.html` | Auth (one login page serves all roles and routes by role) |

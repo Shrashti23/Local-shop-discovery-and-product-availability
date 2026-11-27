@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Product Catalogue | NearShop Karnataka</title>
+<meta name="description" content="Browse the NearShop Karnataka shared product catalogue and check which products have shop-confirmed listings.">
+<link rel="stylesheet" href="bootstrap.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="visually-hidden-focusable" href="#main">Skip to content</a>
+<div id="ns-nav"></div>
+<main class="container py-4" id="main">
+  <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
+    <div><h1 class="h4 mb-1">Product Catalogue</h1><p class="text-muted mb-0">Browse products registered in NearShop. Prices and availability appear only after a shop confirms its listing.</p></div>
+    <a class="btn btn-outline-ns btn-sm" href="search.html">Search confirmed shop listings</a>
+  </div>
+  <div class="row g-2 mb-3">
+    <div class="col-12 col-md-6"><label class="form-label small" for="q">Search products</label><input id="q" class="form-control" maxlength="60" placeholder="Search name or brand"></div>
+    <div class="col-12 col-md-4"><label class="form-label small" for="cat">Category</label><select id="cat" class="form-select"><option value="">All categories</option></select></div>
+  </div>
+  <div id="msg"></div><div id="count" class="small text-muted mb-2"></div><div id="out" class="row g-3"></div>
+</main>
+<div id="ns-footer"></div>
+<script src="bootstrap.bundle.min.js"></script>
+<script src="supabase.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+<script>
+(async function () {
+  await NS.init({ active: 'catalogue' });
+  var $ = function (id) { return document.getElementById(id); };
+  var products = [], categories = [];
+  function render() {
+    var term = NS.safeTerm($('q').value).toLowerCase();
+    var cat = $('cat').value;
+    var list = products.filter(function (p) {
+      var text = [p.name, p.brand, p.variant].join(' ').toLowerCase();
+      return (!term || text.indexOf(term) >= 0) && (!cat || String(p.category_id) === cat);
+    });
+    $('count').textContent = list.length + ' products';
+    $('out').innerHTML = list.length ? list.map(function (p) {
+      return '<div class="col-12 col-sm-6 col-lg-4"><div class="card card-hover h-100 p-3">' +
+        '<div class="d-flex gap-3 align-items-start"><img class="prod-img" style="width:76px;height:76px" loading="lazy" alt="" src="' + NS.esc(NS.imgSrc(p.image_url)) + '">' +
+        '<div class="flex-grow-1"><a class="fw-semibold text-decoration-none" href="product-details.html?id=' + NS.esc(p.id) + '">' + NS.esc(p.name) + '</a>' +
+        '<div class="small text-muted">' + NS.esc(p.brand || '') + (p.variant ? ' · ' + NS.esc(p.variant) : '') + '</div>' +
+        '<div class="small mt-1">' + NS.esc(p.categories ? NS.catName(p.categories) : '') + '</div></div></div>' +
+        '<div class="small text-muted mt-3">No shop price/stock confirmed yet</div>' +
+        '<a class="btn btn-sm btn-outline-ns mt-2" href="product-details.html?id=' + NS.esc(p.id) + '">View product</a></div></div>';
+    }).join('') : '<div class="col-12"><div class="card p-4 text-center">No catalogue products match your search.</div></div>';
+  }
+  var cr = await NS.loadCategories(); categories = cr || [];
+  categories.forEach(function (c) { var o = document.createElement('option'); o.value = c.id; o.textContent = NS.catName(c); $('cat').appendChild(o); });
+  var r = await NS.sb.from('products').select('id,name,brand,variant,description,image_url,category_id,categories(name,name_kn)').order('name').limit(500);
+  if (r.error) { NS.flash($('msg'), 'danger', NS.errMsg(r.error)); return; }
+  products = r.data || []; render();
+  $('q').addEventListener('input', render); $('cat').addEventListener('change', render);
+  NS.onLang(function () { render(); });
+})();
+</script>
+</body>
+</html>

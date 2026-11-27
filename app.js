@@ -30,7 +30,7 @@
   var T = {
     en: {
       brand: 'NearShop Karnataka', tagline: 'Find products. Discover local shops. Save time.',
-      nav_home: 'Home', nav_search: 'Search Products', nav_shops: 'Nearby Shops', nav_login: 'Login',
+      nav_home: 'Home', nav_search: 'Search Products', nav_shops: 'Nearby Shops', nav_catalogue: 'Product Catalogue', nav_login: 'Login',
       nav_customer_login: 'Customer Login', nav_shop_login: 'Shop Owner Login', nav_signup: 'Customer Sign Up',
       nav_register_shop: 'Register Shop', nav_dashboard: 'Dashboard', nav_admin: 'Admin Panel',
       nav_logout: 'Logout', nav_products: 'Manage Products',
@@ -82,7 +82,7 @@
     },
     kn: {
       brand: 'ನಿಯರ್‌ಶಾಪ್ ಕರ್ನಾಟಕ', tagline: 'ಉತ್ಪನ್ನಗಳನ್ನು ಹುಡುಕಿ. ಹತ್ತಿರದ ಅಂಗಡಿಗಳನ್ನು ಕಂಡುಹಿಡಿಯಿರಿ. ಸಮಯ ಉಳಿಸಿ.',
-      nav_home: 'ಮುಖಪುಟ', nav_search: 'ಉತ್ಪನ್ನಗಳನ್ನು ಹುಡುಕಿ', nav_shops: 'ಹತ್ತಿರದ ಅಂಗಡಿಗಳು', nav_login: 'ಲಾಗಿನ್',
+      nav_home: 'ಮುಖಪುಟ', nav_search: 'ಉತ್ಪನ್ನಗಳನ್ನು ಹುಡುಕಿ', nav_shops: 'ಹತ್ತಿರದ ಅಂಗಡಿಗಳು', nav_catalogue: 'ಉತ್ಪನ್ನಗಳ ಪಟ್ಟಿ', nav_login: 'ಲಾಗಿನ್',
       nav_customer_login: 'ಗ್ರಾಹಕ ಲಾಗಿನ್', nav_shop_login: 'ಅಂಗಡಿ ಮಾಲೀಕ ಲಾಗಿನ್', nav_signup: 'ಗ್ರಾಹಕ ನೋಂದಣಿ',
       nav_register_shop: 'ಅಂಗಡಿಯನ್ನು ನೋಂದಾಯಿಸಿ', nav_dashboard: 'ಡ್ಯಾಶ್‌ಬೋರ್ಡ್', nav_admin: 'ನಿರ್ವಾಹಕ ಪ್ಯಾನೆಲ್',
       nav_logout: 'ಲಾಗ್ ಔಟ್', nav_products: 'ಉತ್ಪನ್ನ ನಿರ್ವಹಣೆ',
@@ -319,7 +319,7 @@
       '<button class="navbar-toggler border-light" type="button" data-bs-toggle="collapse" data-bs-target="#nsMenu" aria-controls="nsMenu" aria-expanded="false" aria-label="Menu">' +
       '<span class="navbar-toggler-icon" style="filter:invert(1)"></span></button>' +
       '<div class="collapse navbar-collapse" id="nsMenu"><ul class="navbar-nav me-auto">' +
-      link('index.html', 'nav_home', 'home') + link('search.html', 'nav_search', 'search') + link('shops.html', 'nav_shops', 'shops') +
+      link('index.html', 'nav_home', 'home') + link('search.html', 'nav_search', 'search') + link('shops.html', 'nav_shops', 'shops') + link('catalogue.html', 'nav_catalogue', 'catalogue') +
       '</ul><ul class="navbar-nav align-items-lg-center">' + right +
       '<li class="nav-item"><button class="btn btn-sm btn-outline-light ms-lg-2 mt-1" id="ns-lang" aria-label="Language">' + esc(t('lang_switch')) + '</button></li>' +
       '</ul></div></div></nav>';

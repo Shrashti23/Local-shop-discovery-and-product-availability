@@ -72,11 +72,11 @@
     if (r.error) box.innerHTML = NS.alert('danger', NS.errMsg(r.error));
     else if (!r.data.length) box.innerHTML = '<div class="text-muted">' + NS.esc(NS.t('no_results')) + '</div>';
     else box.innerHTML = r.data.map(function (it) { return NS.resultCard(it); }).join('');
-    var s = await NS.sb.from('shops').select('id,shop_name,city,category_focus,address')
+    var s = await NS.sb.from('shops').select('id,owner_id,shop_name,city,category_focus,address')
       .eq('verification_status', 'approved').order('verified_at', { ascending: false }).limit(6);
     document.getElementById('shopsBox').innerHTML = (s.data || []).map(function (x) {
       return '<div class="col-md-4"><a class="card card-hover p-3 text-decoration-none h-100" href="shop-details.html?id=' + NS.esc(x.id) + '">' +
-        '<div class="fw-semibold">' + NS.esc(x.shop_name) + ' <span class="badge bg-success">&#10003;</span></div>' +
+        '<div class="fw-semibold">' + NS.esc(x.shop_name) + ' <span class="badge ' + (x.owner_id ? 'bg-success' : 'bg-secondary') + '">' + (x.owner_id ? 'Owner verified' : 'Public listing') + '</span></div>' +
         '<div class="small text-muted">' + NS.esc(x.category_focus || '') + '</div>' +
         '<div class="small">' + NS.esc(x.address) + ', ' + NS.esc(x.city) + '</div></a></div>';
     }).join('');
