@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nearby Shops | NearShop Karnataka</title>
+<meta name="description" content="Check product availability and prices at local shops across Karnataka before you visit.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8F%AA%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="bootstrap.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="visually-hidden-focusable" href="#main">Skip to content</a>
+<div id="ns-nav"></div>
+<main class="container py-4" id="main">
+
+<h1 class="h4 mb-3" data-i18n="shops_title"></h1>
+<div class="row g-2 mb-3"><div class="col-12 col-md-5"><label class="visually-hidden" for="sq" data-i18n="name"></label><input id="sq" class="form-control" maxlength="60" data-i18n-ph="shop_search_ph"></div>
+<div class="col-6 col-md-3"><label class="visually-hidden" for="city" data-i18n="city"></label><select id="city" class="form-select"></select></div>
+<div class="col-6 col-md-4 d-grid"><button id="loc" class="btn btn-outline-ns">&#128205; <span data-i18n="use_location"></span></button></div></div>
+<div id="msg"></div><div id="out" class="row g-3"></div>
+</main>
+<div id="ns-footer"></div>
+<script src="bootstrap.bundle.min.js"></script>
+<script src="supabase.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+<script>
+
+(async function () {
+  var ctx = await NS.init({ active: 'shops' });
+  var $ = function (i) { return document.getElementById(i); };
+  var rows = [], pos = null;
+  NS.fillCitySelect($('city'));
+  var c0 = NS.param('city'); if (NS.CITIES.indexOf(c0) >= 0) $('city').value = c0;
+  function draw() {
+    var f = NS.safeTerm($('sq').value).toLowerCase(), c = $('city').value;
+    var list = rows.filter(function (s) { return (!c || s.city === c) && (!f || s.shop_name.toLowerCase().indexOf(f) >= 0); });
+    if (pos) list.sort(function (a, b) { var x = NS.distKm(pos, a), y = NS.distKm(pos, b); return (x === null ? 1e9 : x) - (y === null ? 1e9 : y); });
+    $('out').innerHTML = list.length ? list.map(function (s) {
+      var d = pos ? NS.distKm(pos, s) : null;
+      return '<div class="col-md-6"><div class="card card-hover p-3 h-100"><a class="fw-semibold text-decoration-none" href="shop-details.html?id=' + NS.esc(s.id) + '">' + NS.esc(s.shop_name) + ' <span class="badge bg-success">&#10003;</span></a>' +
+        '<div class="small text-muted">' + NS.esc(s.category_focus || '') + '</div><div class="small">' + NS.esc(s.address) + ', ' + NS.esc(s.city) + ' ' + NS.esc(s.pincode) + '</div>' +
+        '<div class="small">&#128337; ' + NS.esc(s.opening_hours) + (d !== null ? ' &middot; <strong>' + d.toFixed(1) + ' ' + NS.esc(NS.t('km_away')) + '</strong>' : '') + '</div>' +
+        '<div class="mt-2"><a class="btn btn-sm btn-ns" href="tel:+91' + NS.esc(NS.normPhone(s.phone)) + '">&#128222; ' + NS.esc(NS.t('call')) + '</a> ' +
+        '<a class="btn btn-sm btn-outline-ns" href="shop-details.html?id=' + NS.esc(s.id) + '">' + NS.esc(NS.t('view_shop')) + '</a></div></div></div>';
+    }).join('') : '<div class="col-12"><div class="card p-4 text-center">' + NS.esc(NS.t('no_results')) + '</div></div>';
+  }
+  var r = await NS.sb.from('shops').select('id,shop_name,category_focus,address,city,pincode,phone,opening_hours,latitude,longitude').eq('verification_status', 'approved').order('shop_name').limit(500);
+  if (r.error) NS.flash($('msg'), 'danger', NS.errMsg(r.error));
+  rows = r.data || []; draw();
+  $('sq').addEventListener('input', draw); $('city').addEventListener('change', draw);
+  $('loc').addEventListener('click', async function () { try { pos = await NS.getPos(); draw(); } catch (e) { NS.flash($('msg'), 'warning', 'Could not get your location.'); } });
+  NS.onLang(function () { NS.fillCitySelect($('city')); draw(); });
+})();
+
+</script>
+</body>
+</html>

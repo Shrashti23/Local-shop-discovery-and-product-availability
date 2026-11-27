@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Manage Products | NearShop Karnataka</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8F%AA%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="bootstrap.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="visually-hidden-focusable" href="#main">Skip to content</a>
+<div id="ns-nav"></div>
+<main class="container py-4" id="main">
+
+<h1 class="h4 mb-3" data-i18n="nav_products"></h1>
+<div id="msg"></div><div id="banner"></div>
+<div class="card p-3 mb-4"><h2 class="h6" data-i18n="add_product"></h2>
+<div class="mb-2"><label class="form-label small" for="cs" data-i18n="nav_search"></label><input id="cs" class="form-control" maxlength="60" autocomplete="off" placeholder="e.g. Samsung 25W charger"></div>
+<div id="csr" class="mb-2"></div>
+<div id="picked" class="mb-2"></div>
+<button type="button" class="btn btn-sm btn-outline-secondary mb-2" id="newToggle">Can't find it? Create a new product</button>
+<form id="nf" class="row g-2 d-none mb-2" novalidate>
+  <div class="col-md-6"><label class="form-label small" for="pname" data-i18n="name"></label><input id="pname" class="form-control" maxlength="160"></div>
+  <div class="col-md-3"><label class="form-label small" for="pbrand">Brand</label><input id="pbrand" class="form-control" maxlength="80"></div>
+  <div class="col-md-3"><label class="form-label small" for="pvar">Variant / size</label><input id="pvar" class="form-control" maxlength="80" placeholder="5 kg, 25W..."></div>
+  <div class="col-md-4"><label class="form-label small" for="pcat" data-i18n="category"></label><select id="pcat" class="form-select"></select></div>
+  <div class="col-md-8"><label class="form-label small" for="pdesc">Description (optional)</label><input id="pdesc" class="form-control" maxlength="1000"></div>
+  <div class="col-12"><label class="form-label small" for="pimg">Photo (JPG/PNG/WebP, max 2 MB)</label><input id="pimg" type="file" class="form-control" accept="image/jpeg,image/png,image/webp"></div>
+</form>
+<form id="af" class="row g-2" novalidate>
+  <div class="col-6 col-md-3"><label class="form-label small" for="aq" data-i18n="qty"></label><input id="aq" type="number" min="0" step="1" class="form-control" required></div>
+  <div class="col-6 col-md-3"><label class="form-label small" for="ap">Price (&#8377;)</label><input id="ap" type="number" min="0.01" step="0.01" class="form-control" required></div>
+  <div class="col-12 col-md-3 d-grid align-items-end"><button class="btn btn-ns" id="addBtn" data-i18n="add_product"></button></div>
+</form></div>
+<h2 class="h5" data-i18n="your_listings"></h2>
+<div id="list" class="table-responsive"></div>
+</main>
+<div id="ns-footer"></div>
+<script src="bootstrap.bundle.min.js"></script>
+<script src="supabase.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+<script>
+
+(async function () {
+  var ctx = await NS.init({ active: 'products', roles: ['shop_owner'] });
+  if (!ctx) return;
+  var $ = function (i) { return document.getElementById(i); };
+  var sr = await NS.sb.from('shops').select('id,shop_name,verification_status').eq('owner_id', ctx.user.id).maybeSingle();
+  if (sr.error || !sr.data) return NS.flash($('msg'), 'danger', 'No shop is linked to this account.');
+  var shop = sr.data, approved = shop.verification_status === 'approved';
+  var cats = await NS.loadCategories();
+  NS.fillCategorySelect($('pcat'), cats, 'category'); $('pcat').options[0].textContent = '-';
+  var listings = [], picked = null, creating = false;
+  $('banner').innerHTML = approved ? '' : NS.alert('warning', 'Your shop is not approved yet. You can list products from the existing catalogue, but customers will not see them, and creating brand-new catalogue products unlocks after approval.');
+  if (!approved) $('newToggle').classList.add('d-none');
+
+  async function load() {
+    var r = await NS.sb.from('shop_inventory').select('id,quantity,price,availability_status,last_updated,product_id,products(id,name,brand,variant,image_url)').eq('shop_id', shop.id).order('last_updated', { ascending: false }).limit(1000);
+    if (r.error) NS.flash($('msg'), 'danger', NS.errMsg(r.error));
+    listings = r.data || []; draw();
+  }
+  function draw() {
+    $('list').innerHTML = listings.length ? '<table class="table table-sm bg-white align-middle"><thead><tr><th>' + NS.esc(NS.t('product')) + '</th><th>' + NS.esc(NS.t('qty')) + '</th><th>' + NS.esc(NS.t('price')) +
+      ' (&#8377;)</th><th>' + NS.esc(NS.t('status')) + '</th><th>' + NS.esc(NS.t('actions')) + '</th></tr></thead><tbody>' + listings.map(function (r) {
+        var p = r.products, nm = p.name + (p.variant ? ' (' + p.variant + ')' : '');
+        return '<tr data-id="' + NS.esc(r.id) + '"><td><img class="prod-img" style="width:40px;height:40px" alt="" src="' + NS.esc(NS.imgSrc(p.image_url)) + '"> ' + NS.esc(nm) + '<div class="small text-muted">' + NS.esc(p.brand || '') + '</div></td>' +
+          '<td><input type="number" min="0" step="1" class="form-control form-control-sm qty-input" value="' + NS.esc(r.quantity) + '" aria-label="Quantity"></td>' +
+          '<td><input type="number" min="0.01" step="0.01" class="form-control form-control-sm price-input" value="' + NS.esc(r.price) + '" aria-label="Price"></td>' +
+          '<td>' + NS.stockBadge(r) + '<div>' + NS.freshLine(r) + '</div></td>' +
+          '<td class="text-nowrap"><button class="btn btn-sm btn-ns act-save">' + NS.esc(NS.t('save')) + '</button> ' +
+          '<button class="btn btn-sm btn-outline-secondary act-out" title="' + NS.esc(NS.t('mark_out')) + '">0</button> ' +
+          '<button class="btn btn-sm btn-outline-success act-confirm" title="' + NS.esc(NS.t('confirm_stock')) + '">&#10003;</button> ' +
+          '<button class="btn btn-sm btn-outline-danger act-del" title="' + NS.esc(NS.t('delete')) + '">&#128465;</button></td></tr>';
+      }).join('') + '</tbody></table>' : '<div class="text-muted">-</div>';
+  }
+  async function saveRow(tr, forceQty) {
+    var qty = forceQty !== undefined ? forceQty : Number(tr.querySelector('.qty-input').value);
+    var price = Number(tr.querySelector('.price-input').value);
+    if (!Number.isInteger(qty) || qty < 0) return NS.flash($('msg'), 'warning', 'Quantity must be a whole number, 0 or more.');
+    if (!(price > 0)) return NS.flash($('msg'), 'warning', 'Price must be greater than 0.');
+    var r = await NS.sb.from('shop_inventory').update({ quantity: qty, price: price }).eq('id', tr.getAttribute('data-id'));
+    if (r.error) return NS.flash($('msg'), 'danger', NS.errMsg(r.error));
+    NS.flash($('msg'), 'success', NS.t('quantity_updated')); load();
+  }
+  $('list').addEventListener('click', async function (e) {
+    var tr = e.target.closest('tr[data-id]'); if (!tr) return;
+    if (e.target.closest('.act-save') || e.target.closest('.act-confirm')) saveRow(tr);
+    else if (e.target.closest('.act-out')) saveRow(tr, 0);
+    else if (e.target.closest('.act-del')) {
+      if (!window.confirm('Remove this product from your shop?')) return;
+      var r = await NS.sb.from('shop_inventory').delete().eq('id', tr.getAttribute('data-id'));
+      if (r.error) return NS.flash($('msg'), 'danger', NS.errMsg(r.error)); load();
+    }
+  });
+
+  // --- catalogue search
+  var timer = null;
+  $('cs').addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(searchCat, 300); });
+  async function searchCat() {
+    var terms = NS.safeTerm($('cs').value).split(' ').filter(Boolean).slice(0, 4);
+    if (!terms.length) { $('csr').innerHTML = ''; return; }
+    var q = NS.sb.from('products').select('id,name,brand,variant').limit(8);
+    terms.forEach(function (w) { q = q.or('name.ilike.*' + w + '*,brand.ilike.*' + w + '*,variant.ilike.*' + w + '*'); });
+    var r = await q;
+    var have = {}; listings.forEach(function (l) { have[l.product_id] = true; });
+    var rows = (r.data || []).filter(function (p) { return !have[p.id]; });
+    $('csr').innerHTML = rows.length ? '<div class="list-group">' + rows.map(function (p) {
+      return '<button type="button" class="list-group-item list-group-item-action pick" data-id="' + NS.esc(p.id) + '" data-name="' + NS.esc(p.name + (p.variant ? ' (' + p.variant + ')' : '') + (p.brand ? ' - ' + p.brand : '')) + '">' +
+        NS.esc(p.name) + (p.variant ? ' (' + NS.esc(p.variant) + ')' : '') + ' <span class="text-muted small">' + NS.esc(p.brand || '') + '</span></button>';
+    }).join('') + '</div>' : '<div class="small text-muted">No matching catalogue product (or already listed).</div>';
+  }
+  $('csr').addEventListener('click', function (e) {
+    var b = e.target.closest('.pick'); if (!b) return;
+    picked = { id: b.getAttribute('data-id'), name: b.getAttribute('data-name') };
+    creating = false; $('nf').classList.add('d-none');
+    $('picked').innerHTML = '<span class="badge bg-success fs-6">' + NS.esc(picked.name) + '</span> <button type="button" class="btn btn-sm btn-link" id="unpick">x</button>';
+    $('csr').innerHTML = '';
+  });
+  $('picked').addEventListener('click', function (e) { if (e.target.id === 'unpick') { picked = null; $('picked').innerHTML = ''; } });
+  $('newToggle').addEventListener('click', function () {
+    creating = !creating; $('nf').classList.toggle('d-none', !creating);
+    if (creating) { picked = null; $('picked').innerHTML = ''; }
+  });
+
+  $('af').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var qty = Number($('aq').value), price = Number($('ap').value);
+    if ($('aq').value === '' || !Number.isInteger(qty) || qty < 0) return NS.flash($('msg'), 'warning', 'Quantity must be a whole number, 0 or more.');
+    if (!(price > 0)) return NS.flash($('msg'), 'warning', 'Price must be greater than 0.');
+    if (!picked && !creating) return NS.flash($('msg'), 'warning', 'Search and pick a product, or create a new one.');
+    $('addBtn').disabled = true;
+    try {
+      var pid = picked && picked.id;
+      if (!pid) {
+        var name = $('pname').value.trim();
+        if (name.length < 2) throw new Error('Enter the product name.');
+        if (!$('pcat').value) throw new Error('Select a category.');
+        var imgUrl = null, f = $('pimg').files[0];
+        if (f) {
+          var ext = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }[f.type];
+          if (!ext) throw new Error('Photo must be JPG, PNG or WebP.');
+          if (f.size > 2 * 1024 * 1024) throw new Error('Photo must be 2 MB or smaller.');
+          var path = ctx.user.id + '/' + Date.now() + '-' + Math.random().toString(36).slice(2, 10) + '.' + ext;
+          var up = await NS.sb.storage.from('product-images').upload(path, f, { contentType: f.type, upsert: false });
+          if (up.error) throw new Error('Photo upload failed: ' + up.error.message);
+          imgUrl = NS.sb.storage.from('product-images').getPublicUrl(path).data.publicUrl;
+        }
+        var pr = await NS.sb.from('products').insert({ name: name, brand: $('pbrand').value.trim() || null, variant: $('pvar').value.trim() || null,
+          category_id: Number($('pcat').value), description: $('pdesc').value.trim() || null, image_url: imgUrl }).select('id').single();
+        if (pr.error) throw new Error(pr.error.code === '23505' ? 'This product already exists in the catalogue. Search for it above and pick it.' : NS.errMsg(pr.error));
+        pid = pr.data.id;
+      }
+      var ir = await NS.sb.from('shop_inventory').insert({ shop_id: shop.id, product_id: pid, quantity: qty, price: price });
+      if (ir.error) throw new Error(ir.error.code === '23505' ? 'This product is already in your shop. Edit it in the list below.' : NS.errMsg(ir.error));
+      NS.flash($('msg'), 'success', NS.t('quantity_updated'));
+      picked = null; creating = false; $('picked').innerHTML = ''; $('nf').classList.add('d-none'); $('nf').reset(); $('af').reset(); $('cs').value = ''; $('csr').innerHTML = '';
+      load();
+    } catch (err) { NS.flash($('msg'), 'danger', err.message); }
+    $('addBtn').disabled = false;
+  });
+  load(); NS.onLang(function () { draw(); });
+})();
+
+</script>
+</body>
+</html>

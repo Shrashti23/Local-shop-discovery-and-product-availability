@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Customer Sign Up | NearShop Karnataka</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8F%AA%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="bootstrap.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="visually-hidden-focusable" href="#main">Skip to content</a>
+<div id="ns-nav"></div>
+<main class="container py-4" id="main">
+
+<div class="row justify-content-center"><div class="col-md-7 col-lg-6"><div class="card p-4">
+  <h1 class="h4 mb-3" data-i18n="register_customer"></h1>
+  <div id="msg"></div>
+  <form id="f" novalidate>
+    <div class="mb-3"><label class="form-label" for="name" data-i18n="full_name"></label><input id="name" class="form-control" maxlength="120" autocomplete="name" required></div>
+    <div class="mb-3"><label class="form-label" for="email" data-i18n="email"></label><input id="email" type="email" class="form-control" autocomplete="email" required></div>
+    <div class="mb-3"><label class="form-label" for="phone" data-i18n="mobile"></label><input id="phone" class="form-control" inputmode="numeric" maxlength="14" autocomplete="tel" placeholder="98XXXXXXXX" required></div>
+    <div class="mb-3"><label class="form-label" for="pw" data-i18n="password"></label><input id="pw" type="password" class="form-control" autocomplete="new-password" minlength="8" required>
+      <div class="form-text">Minimum 8 characters, with letters and numbers.</div></div>
+    <div class="form-check mb-3"><input class="form-check-input" type="checkbox" id="consent" required><label class="form-check-label small" for="consent" data-i18n="consent"></label></div>
+    <div class="d-grid"><button class="btn btn-ns" id="btn" data-i18n="register_customer"></button></div>
+  </form>
+  <div class="mt-3 small"><span data-i18n="have_account"></span> <a href="login.html?role=customer" data-i18n="login_btn"></a></div>
+</div></div></div>
+</main>
+<div id="ns-footer"></div>
+<script src="bootstrap.bundle.min.js"></script>
+<script src="supabase.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+<script>
+
+(async function () {
+  var ctx = await NS.init({ active: 'signup' });
+  var $ = function (i) { return document.getElementById(i); };
+  if (ctx && ctx.profile) { location.replace(NS.dashboardFor(ctx.profile.role)); return; }
+  $('f').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var name = $('name').value.trim(), email = $('email').value.trim(), phone = $('phone').value, pw = $('pw').value;
+    if (name.length < 2) return NS.flash($('msg'), 'warning', 'Enter your full name.');
+    if (!NS.validEmail(email)) return NS.flash($('msg'), 'warning', 'Enter a valid email address.');
+    if (!NS.validPhone(phone)) return NS.flash($('msg'), 'warning', 'Enter a valid 10-digit Indian mobile number starting with 6-9.');
+    if (!NS.validPassword(pw)) return NS.flash($('msg'), 'warning', 'Password must be at least 8 characters with letters and numbers.');
+    if (!$('consent').checked) return NS.flash($('msg'), 'warning', 'Please accept the data-processing consent to continue.');
+    $('btn').disabled = true;
+    var r = await NS.sb.auth.signUp({ email: email, password: pw, options: { data: { full_name: name, phone: NS.normPhone(phone), role: 'customer', language: NS.lang() } } });
+    $('btn').disabled = false;
+    if (r.error) return NS.flash($('msg'), 'danger', r.error.message);
+    if (r.data.session) { location.href = 'customer-dashboard.html'; return; }
+    $('f').remove();
+    NS.flash($('msg'), 'success', NS.t('check_email'));
+  });
+})();
+
+</script>
+</body>
+</html>

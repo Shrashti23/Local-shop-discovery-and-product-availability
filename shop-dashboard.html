@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Shop Dashboard | NearShop Karnataka</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8F%AA%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="bootstrap.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="visually-hidden-focusable" href="#main">Skip to content</a>
+<div id="ns-nav"></div>
+<main class="container py-4" id="main">
+
+<h1 class="h4 mb-3" data-i18n="nav_dashboard"></h1>
+<div id="msg"></div><div id="statusBox"></div>
+<div class="row g-3 mb-4" id="stats"></div>
+<div class="mb-4"><a class="btn btn-ns" href="manage-products.html" data-i18n="nav_products"></a></div>
+<div class="card p-3 mb-4"><h2 class="h6" data-i18n="shop_details"></h2>
+<form id="sf" class="row g-2" novalidate>
+  <div class="col-md-6"><label class="form-label small" for="sname" data-i18n="name"></label><input id="sname" class="form-control" maxlength="150"></div>
+  <div class="col-md-6"><label class="form-label small" for="addr" data-i18n="address"></label><input id="addr" class="form-control" maxlength="300"></div>
+  <div class="col-md-3"><label class="form-label small" for="city" data-i18n="city"></label><input id="city" class="form-control" maxlength="80"></div>
+  <div class="col-md-3"><label class="form-label small" for="pin" data-i18n="pincode"></label><input id="pin" class="form-control" maxlength="6" inputmode="numeric"></div>
+  <div class="col-md-3"><label class="form-label small" for="sphone" data-i18n="phone"></label><input id="sphone" class="form-control" maxlength="14" inputmode="numeric"></div>
+  <div class="col-md-3"><label class="form-label small" for="hours" data-i18n="hours"></label><input id="hours" class="form-control" maxlength="60"></div>
+  <div class="col-md-3"><label class="form-label small" for="lat">Latitude</label><input id="lat" class="form-control" inputmode="decimal"></div>
+  <div class="col-md-3"><label class="form-label small" for="lng">Longitude</label><input id="lng" class="form-control" inputmode="decimal"></div>
+  <div class="col-md-3 d-grid align-items-end"><button type="button" class="btn btn-outline-ns" id="here">&#128205; <span data-i18n="use_location"></span></button></div>
+  <div class="col-md-3 d-grid align-items-end"><button class="btn btn-ns" data-i18n="save"></button></div>
+  <div class="form-text">Changing the shop name, address, city or PIN code sends your shop back for admin re-verification.</div>
+</form></div>
+<h2 class="h5" data-i18n="enquiries"></h2><div id="enq"></div>
+</main>
+<div id="ns-footer"></div>
+<script src="bootstrap.bundle.min.js"></script>
+<script src="supabase.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+<script>
+
+(async function () {
+  var ctx = await NS.init({ active: 'dashboard', roles: ['shop_owner'] });
+  if (!ctx) return;
+  var $ = function (i) { return document.getElementById(i); };
+  var sr = await NS.sb.from('shops').select('*').eq('owner_id', ctx.user.id).maybeSingle();
+  if (sr.error || !sr.data) return NS.flash($('msg'), 'danger', 'No shop is linked to this account. Contact support.');
+  var shop = sr.data;
+  function drawStatus() {
+    var cls = shop.verification_status === 'approved' ? 'success' : shop.verification_status === 'rejected' ? 'danger' : 'warning';
+    var txt = shop.verification_status === 'approved' ? 'Your shop is verified and visible to customers.' :
+      shop.verification_status === 'rejected' ? 'Your shop was rejected by the admin. ' + (shop.verification_notes || '') :
+      'Your shop is pending admin approval. Customers cannot see it yet.' + (shop.verification_notes ? ' Note: ' + shop.verification_notes : '');
+    $('statusBox').innerHTML = '<div class="alert alert-' + cls + '"><strong>' + NS.esc(NS.t('shop_status')) + ': ' + NS.esc(NS.t(shop.verification_status)) + '.</strong> ' + NS.esc(txt) + '</div>';
+  }
+  function fillForm() {
+    $('sname').value = shop.shop_name; $('addr').value = shop.address; $('city').value = shop.city; $('pin').value = shop.pincode;
+    $('sphone').value = shop.phone; $('hours').value = shop.opening_hours; $('lat').value = shop.latitude === null ? '' : shop.latitude; $('lng').value = shop.longitude === null ? '' : shop.longitude;
+  }
+  async function stats() {
+    var r = await NS.sb.from('shop_inventory').select('quantity,availability_status,last_updated').eq('shop_id', shop.id).limit(5000);
+    var d = r.data || [];
+    var stale = d.filter(function (x) { return NS.freshness(x.last_updated) === 'unverified'; }).length;
+    var cards = [[NS.t('stats_total'), d.length], [NS.t('stats_available'), d.filter(function (x) { return x.availability_status === 'available'; }).length],
+      [NS.t('stats_low'), d.filter(function (x) { return x.availability_status === 'low_stock'; }).length],
+      [NS.t('stats_out'), d.filter(function (x) { return x.availability_status === 'out_of_stock'; }).length], [NS.t('stats_stale'), stale]];
+    $('stats').innerHTML = cards.map(function (c) { return '<div class="col-6 col-md"><div class="card p-3"><div class="stat">' + c[1] + '</div><div class="small text-muted">' + NS.esc(c[0]) + '</div></div></div>'; }).join('');
+  }
+  async function enquiries() {
+    var r = await NS.sb.from('enquiries').select('id,message,customer_phone,status,shop_reply,created_at,products(name)').eq('shop_id', shop.id).order('created_at', { ascending: false }).limit(100);
+    var d = r.data || [];
+    $('enq').innerHTML = d.length ? d.map(function (x) {
+      return '<div class="card p-3 mb-2"><div class="d-flex justify-content-between"><div class="small text-muted">' + NS.esc(NS.fmtDate(x.created_at)) + (x.products ? ' &middot; ' + NS.esc(x.products.name) : '') + '</div>' +
+        '<span class="badge bg-' + (x.status === 'pending' ? 'secondary' : 'success') + '">' + NS.esc(x.status) + '</span></div>' +
+        '<div class="my-1">' + NS.esc(x.message) + '</div><div class="small">&#128222; <a href="tel:+91' + NS.esc(x.customer_phone) + '">' + NS.esc(x.customer_phone) + '</a></div>' +
+        (x.shop_reply ? '<div class="mt-2 p-2 bg-light rounded"><strong>' + NS.esc(NS.t('reply')) + ':</strong> ' + NS.esc(x.shop_reply) + '</div>' : '') +
+        '<form class="mt-2 d-flex gap-2 reply-form" data-id="' + NS.esc(x.id) + '"><input class="form-control form-control-sm" maxlength="1000" placeholder="' + NS.esc(NS.t('reply')) + '" required>' +
+        '<button class="btn btn-sm btn-ns">' + NS.esc(NS.t('send')) + '</button><button type="button" class="btn btn-sm btn-outline-secondary close-enq" data-id="' + NS.esc(x.id) + '">' + NS.esc(NS.t('close')) + '</button></form></div>';
+    }).join('') : '<div class="text-muted">-</div>';
+  }
+  $('enq').addEventListener('submit', async function (e) {
+    var f = e.target.closest('.reply-form'); if (!f) return; e.preventDefault();
+    var txt = f.querySelector('input').value.trim(); if (!txt) return;
+    var r = await NS.sb.from('enquiries').update({ shop_reply: txt }).eq('id', f.getAttribute('data-id'));
+    if (r.error) return NS.flash($('msg'), 'danger', NS.errMsg(r.error)); enquiries();
+  });
+  $('enq').addEventListener('click', async function (e) {
+    var b = e.target.closest('.close-enq'); if (!b) return;
+    var r = await NS.sb.from('enquiries').update({ status: 'closed' }).eq('id', b.getAttribute('data-id'));
+    if (r.error) return NS.flash($('msg'), 'danger', NS.errMsg(r.error)); enquiries();
+  });
+  $('here').addEventListener('click', async function () {
+    try { var p = await NS.getPos(); $('lat').value = p.lat.toFixed(6); $('lng').value = p.lng.toFixed(6); }
+    catch (e) { NS.flash($('msg'), 'warning', 'Could not get your location.'); }
+  });
+  $('sf').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var v = function (i) { return $(i).value.trim(); };
+    var lat = v('lat') === '' ? null : Number(v('lat')), lng = v('lng') === '' ? null : Number(v('lng'));
+    var err = null;
+    if (v('sname').length < 2) err = 'Enter the shop name.';
+    else if (v('addr').length < 5) err = 'Enter the full address.';
+    else if (v('city').length < 2) err = 'Enter the city.';
+    else if (!NS.validPin(v('pin'))) err = 'Enter a valid Karnataka PIN code.';
+    else if (!NS.validPhone(v('sphone'))) err = 'Enter a valid 10-digit phone number.';
+    else if ((lat !== null && (isNaN(lat) || lat < 11 || lat > 19)) || (lng !== null && (isNaN(lng) || lng < 74 || lng > 79))) err = 'Coordinates must be inside Karnataka (lat 11-19, lng 74-79).';
+    else if ((lat === null) !== (lng === null)) err = 'Provide both latitude and longitude, or neither.';
+    if (err) return NS.flash($('msg'), 'warning', err);
+    var r = await NS.sb.from('shops').update({ shop_name: v('sname'), address: v('addr'), city: v('city'), pincode: v('pin'),
+      phone: NS.normPhone(v('sphone')), opening_hours: v('hours') || '9:00 AM - 9:00 PM', latitude: lat, longitude: lng }).eq('id', shop.id).select('*').maybeSingle();
+    if (r.error || !r.data) return NS.flash($('msg'), 'danger', r.error ? NS.errMsg(r.error) : 'Update failed.');
+    shop = r.data; fillForm(); drawStatus(); NS.flash($('msg'), 'success', NS.t('quantity_updated'));
+  });
+  drawStatus(); fillForm(); stats(); enquiries();
+  NS.onLang(function () { drawStatus(); stats(); enquiries(); });
+})();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Register Shop | NearShop Karnataka</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8F%AA%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="bootstrap.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="visually-hidden-focusable" href="#main">Skip to content</a>
+<div id="ns-nav"></div>
+<main class="container py-4" id="main">
+
+<div class="row justify-content-center"><div class="col-lg-8"><div class="card p-4">
+  <h1 class="h4 mb-1" data-i18n="register_shop_title"></h1>
+  <p class="text-muted" data-i18n="reg_shop_note"></p>
+  <div id="msg"></div>
+  <form id="f" novalidate>
+    <h2 class="h6 mt-2" data-i18n="owner_details"></h2>
+    <div class="row g-3 mb-3">
+      <div class="col-md-6"><label class="form-label" for="name" data-i18n="full_name"></label><input id="name" class="form-control" maxlength="120" autocomplete="name" required></div>
+      <div class="col-md-6"><label class="form-label" for="email" data-i18n="email"></label><input id="email" type="email" class="form-control" autocomplete="email" required></div>
+      <div class="col-md-6"><label class="form-label" for="phone" data-i18n="mobile"></label><input id="phone" class="form-control" inputmode="numeric" maxlength="14" required></div>
+      <div class="col-md-6"><label class="form-label" for="pw" data-i18n="password"></label><input id="pw" type="password" class="form-control" autocomplete="new-password" minlength="8" required></div>
+    </div>
+    <h2 class="h6" data-i18n="shop_details"></h2>
+    <div class="row g-3 mb-3">
+      <div class="col-md-8"><label class="form-label" for="sname" data-i18n="name"></label><input id="sname" class="form-control" maxlength="150" required></div>
+      <div class="col-md-4"><label class="form-label" for="focus" data-i18n="category_focus"></label><select id="focus" class="form-select"></select></div>
+      <div class="col-12"><label class="form-label" for="addr" data-i18n="address"></label><input id="addr" class="form-control" maxlength="300" required></div>
+      <div class="col-md-4"><label class="form-label" for="city" data-i18n="city"></label><input id="city" class="form-control" list="cityList" maxlength="80" required><datalist id="cityList"></datalist></div>
+      <div class="col-md-4"><label class="form-label" for="dist" data-i18n="district"></label><select id="dist" class="form-select" required></select></div>
+      <div class="col-md-4"><label class="form-label" for="pin" data-i18n="pincode"></label><input id="pin" class="form-control" inputmode="numeric" maxlength="6" placeholder="575001" required></div>
+      <div class="col-md-6"><label class="form-label" for="sphone" data-i18n="phone"></label><input id="sphone" class="form-control" inputmode="numeric" maxlength="14" required></div>
+      <div class="col-md-6"><label class="form-label" for="hours" data-i18n="hours"></label><input id="hours" class="form-control" maxlength="60" value="9:00 AM - 9:00 PM"></div>
+    </div>
+    <div class="form-check mb-3"><input class="form-check-input" type="checkbox" id="consent" required><label class="form-check-label small" for="consent" data-i18n="consent"></label></div>
+    <div class="d-grid"><button class="btn btn-ns" id="btn" data-i18n="register_shop"></button></div>
+  </form>
+  <div class="mt-3 small"><span data-i18n="have_account"></span> <a href="login.html?role=shop_owner" data-i18n="login_btn"></a></div>
+</div></div></div>
+</main>
+<div id="ns-footer"></div>
+<script src="bootstrap.bundle.min.js"></script>
+<script src="supabase.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+<script>
+
+(async function () {
+  var ctx = await NS.init({ active: 'shoplogin' });
+  var $ = function (i) { return document.getElementById(i); };
+  if (ctx && ctx.profile) { location.replace(NS.dashboardFor(ctx.profile.role)); return; }
+  $('cityList').innerHTML = NS.CITIES.map(function (c) { return '<option value="' + NS.esc(c) + '">'; }).join('');
+  $('dist').innerHTML = '<option value="">-</option>' + NS.DISTRICTS.map(function (d) { return '<option>' + NS.esc(d) + '</option>'; }).join('');
+  var cats = await NS.loadCategories();
+  $('focus').innerHTML = cats.map(function (c) { return '<option value="' + NS.esc(c.name) + '">' + NS.esc(c.name) + '</option>'; }).join('') + '<option value="">Other</option>';
+  $('f').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var v = function (i) { return $(i).value.trim(); };
+    var err = null;
+    if (v('name').length < 2) err = 'Enter the owner name.';
+    else if (!NS.validEmail(v('email'))) err = 'Enter a valid email address.';
+    else if (!NS.validPhone(v('phone'))) err = 'Enter a valid 10-digit owner mobile number.';
+    else if (!NS.validPassword($('pw').value)) err = 'Password must be at least 8 characters with letters and numbers.';
+    else if (v('sname').length < 2) err = 'Enter the shop name.';
+    else if (v('addr').length < 5) err = 'Enter the full shop address.';
+    else if (v('city').length < 2) err = 'Enter the city.';
+    else if (!v('dist')) err = 'Select the district.';
+    else if (!NS.validPin(v('pin'))) err = 'Enter a valid Karnataka PIN code (560001 - 591999).';
+    else if (!NS.validPhone(v('sphone'))) err = 'Enter a valid 10-digit shop phone number.';
+    else if (!$('consent').checked) err = 'Please accept the data-processing consent to continue.';
+    if (err) return NS.flash($('msg'), 'warning', err);
+    $('btn').disabled = true;
+    var r = await NS.sb.auth.signUp({
+      email: v('email'), password: $('pw').value,
+      options: { data: { full_name: v('name'), phone: NS.normPhone(v('phone')), role: 'shop_owner', language: NS.lang(),
+        shop: { shop_name: v('sname'), category_focus: v('focus'), address: v('addr'), city: v('city'), district: v('dist'),
+                pincode: v('pin'), phone: NS.normPhone(v('sphone')), opening_hours: v('hours') } } }
+    });
+    $('btn').disabled = false;
+    if (r.error) return NS.flash($('msg'), 'danger', r.error.message);
+    if (r.data.session) { location.href = 'shop-dashboard.html'; return; }
+    $('f').remove();
+    NS.flash($('msg'), 'success', NS.t('check_email') + ' ' + NS.t('reg_shop_note'));
+  });
+})();
+
+</script>
+</body>
+</html>

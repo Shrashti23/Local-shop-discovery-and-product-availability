@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Admin | NearShop Karnataka</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8F%AA%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="bootstrap.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="visually-hidden-focusable" href="#main">Skip to content</a>
+<div id="ns-nav"></div>
+<main class="container py-4" id="main">
+
+<h1 class="h4 mb-3" data-i18n="nav_admin"></h1>
+<ul class="nav nav-pills mb-3 flex-wrap" id="tabs">
+  <li class="nav-item"><button class="nav-link active" data-tab="overview">Overview</button></li>
+  <li class="nav-item"><button class="nav-link" data-tab="shops">Shops</button></li>
+  <li class="nav-item"><button class="nav-link" data-tab="users">Users</button></li>
+  <li class="nav-item"><button class="nav-link" data-tab="cats">Categories</button></li>
+  <li class="nav-item"><button class="nav-link" data-tab="products">Products</button></li>
+  <li class="nav-item"><button class="nav-link" data-tab="reports">Reports</button></li>
+</ul>
+<div id="msg"></div><div id="pane"></div>
+</main>
+<div id="ns-footer"></div>
+<script src="bootstrap.bundle.min.js"></script>
+<script src="supabase.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+<script>
+
+(async function () {
+  var ctx = await NS.init({ active: 'dashboard', roles: ['admin'] });
+  if (!ctx) return;
+  var $ = function (i) { return document.getElementById(i); };
+  var E = NS.esc, tab = 'overview';
+  function cnt(table, fn) {
+    var q = NS.sb.from(table).select('id', { count: 'exact', head: true });
+    if (fn) q = fn(q);
+    return q.then(function (r) { return r.error ? '?' : r.count; });
+  }
+  var loaders = {
+    overview: async function () {
+      var v = await Promise.all([
+        cnt('profiles', function (q) { return q.eq('role', 'customer'); }), cnt('profiles', function (q) { return q.eq('role', 'shop_owner'); }),
+        cnt('shops'), cnt('shops', function (q) { return q.eq('verification_status', 'pending'); }), cnt('shops', function (q) { return q.eq('verification_status', 'approved'); }),
+        cnt('products'), cnt('shop_inventory'), cnt('enquiries'), cnt('reports', function (q) { return q.eq('status', 'open'); }), cnt('reviews')]);
+      var names = ['Customers', 'Shop owners', 'Shops (all)', 'Shops pending approval', 'Shops approved', 'Catalogue products', 'Inventory listings', 'Enquiries', 'Open reports', 'Reviews'];
+      $('pane').innerHTML = '<div class="row g-3">' + names.map(function (n, i) {
+        return '<div class="col-6 col-md-3"><div class="card p-3"><div class="stat">' + E(v[i]) + '</div><div class="small text-muted">' + E(n) + '</div></div></div>';
+      }).join('') + '</div>';
+    },
+    shops: async function () {
+      var st = ($('pane').getAttribute('data-st')) || 'pending';
+      var q = NS.sb.from('shops').select('id,shop_name,city,district,pincode,phone,address,verification_status,verification_notes,owner_id,created_at,profiles(full_name,email)').order('created_at', { ascending: false }).limit(300);
+      if (st !== 'all') q = q.eq('verification_status', st);
+      var r = await q; if (r.error) return NS.flash($('msg'), 'danger', NS.errMsg(r.error));
+      $('pane').innerHTML = '<div class="mb-2"><select id="stf" class="form-select w-auto">' + ['pending', 'approved', 'rejected', 'all'].map(function (s) { return '<option' + (s === st ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select></div>' +
+        (r.data.length ? '<div class="table-responsive"><table class="table table-sm bg-white align-middle"><thead><tr><th>Shop</th><th>Location</th><th>Owner</th><th>Status</th><th></th></tr></thead><tbody>' +
+        r.data.map(function (s) {
+          return '<tr data-id="' + E(s.id) + '"><td><strong>' + E(s.shop_name) + '</strong><div class="small text-muted">' + E(s.address) + '</div><div class="small">' + E(s.phone) + '</div></td>' +
+            '<td>' + E(s.city) + ', ' + E(s.district) + '<div class="small">' + E(s.pincode) + '</div></td>' +
+            '<td>' + (s.profiles ? E(s.profiles.full_name) + '<div class="small text-muted">' + E(s.profiles.email) + '</div>' : '<span class="text-muted">demo / none</span>') + '</td>' +
+            '<td><span class="badge bg-' + (s.verification_status === 'approved' ? 'success' : s.verification_status === 'rejected' ? 'danger' : 'warning text-dark') + '">' + E(s.verification_status) + '</span>' +
+            (s.verification_notes ? '<div class="small">' + E(s.verification_notes) + '</div>' : '') + '</td>' +
+            '<td class="text-nowrap"><button class="btn btn-sm btn-success a-ok">Approve</button> <button class="btn btn-sm btn-outline-warning a-no">Reject</button> <button class="btn btn-sm btn-outline-danger a-del">Delete</button></td></tr>';
+        }).join('') + '</tbody></table></div>' : '<div class="text-muted">No shops.</div>');
+      $('stf').addEventListener('change', function () { $('pane').setAttribute('data-st', this.value); loaders.shops(); });
+    },
+    users: async function () {
+      var r = await NS.sb.from('profiles').select('id,full_name,email,phone,role,created_at').order('created_at', { ascending: false }).limit(500);
+      if (r.error) return NS.flash($('msg'), 'danger', NS.errMsg(r.error));
+      $('pane').innerHTML = '<div class="table-responsive"><table class="table table-sm bg-white"><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Joined</th></tr></thead><tbody>' +
+        r.data.map(function (u) { return '<tr><td>' + E(u.full_name) + '</td><td>' + E(u.email) + '</td><td>' + E(u.phone || '') + '</td><td>' + E(u.role) + '</td><td>' + E(NS.fmtDate(u.created_at)) + '</td></tr>'; }).join('') +
+        '</tbody></table></div><div class="small text-muted">User deletion needs the service-role key and is intentionally not available from the browser. Delete users in Supabase Dashboard > Authentication.</div>';
+    },
+    cats: async function () {
+      var c = await NS.loadCategories();
+      $('pane').innerHTML = '<form id="cf" class="row g-2 mb-3"><div class="col-md-4"><input id="cn" class="form-control" placeholder="Name (English)" maxlength="80" required></div>' +
+        '<div class="col-md-4"><input id="ck" class="form-control" placeholder="Name (Kannada)" maxlength="80"></div><div class="col-md-2"><input id="ci" class="form-control" placeholder="Emoji" maxlength="4"></div>' +
+        '<div class="col-md-2 d-grid"><button class="btn btn-ns">Add</button></div></form><ul class="list-group">' +
+        c.map(function (x) { return '<li class="list-group-item d-flex justify-content-between align-items-center" data-id="' + E(x.id) + '"><span>' + E(x.icon) + ' ' + E(x.name) + ' / ' + E(x.name_kn || '') + '</span><button class="btn btn-sm btn-outline-danger c-del">Delete</button></li>'; }).join('') + '</ul>';
+      $('cf').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var r = await NS.sb.from('categories').insert({ name: $('cn').value.trim(), name_kn: $('ck').value.trim() || null, icon: $('ci').value.trim() || '\uD83D\uDCE6' });
+        if (r.error) return NS.flash($('msg'), 'danger', NS.errMsg(r.error)); NS.flash($('msg'), 'success', 'Added.'); loaders.cats();
+      });
+    },
+    products: async function () {
+      var term = NS.safeTerm($('pane').getAttribute('data-q') || '');
+      var q = NS.sb.from('products').select('id,name,brand,variant,created_at,profiles(full_name)').order('created_at', { ascending: false }).limit(100);
+      if (term) q = q.ilike('name', '%' + term + '%');
+      var r = await q; if (r.error) return NS.flash($('msg'), 'danger', NS.errMsg(r.error));
+      $('pane').innerHTML = '<form id="pq" class="mb-2 d-flex gap-2"><input id="pqi" class="form-control" placeholder="Search product name" value="' + E(term) + '"><button class="btn btn-ns">Search</button></form>' +
+        '<div class="table-responsive"><table class="table table-sm bg-white"><thead><tr><th>Product</th><th>Brand</th><th>Added by</th><th></th></tr></thead><tbody>' +
+        r.data.map(function (p) { return '<tr data-id="' + E(p.id) + '"><td>' + E(p.name) + (p.variant ? ' (' + E(p.variant) + ')' : '') + '</td><td>' + E(p.brand || '') + '</td><td>' + E(p.profiles ? p.profiles.full_name : 'seed/admin') + '</td><td><button class="btn btn-sm btn-outline-danger p-del">Delete</button></td></tr>'; }).join('') + '</tbody></table></div>';
+      $('pq').addEventListener('submit', function (e) { e.preventDefault(); $('pane').setAttribute('data-q', $('pqi').value); loaders.products(); });
+    },
+    reports: async function () {
+      var st = $('pane').getAttribute('data-rs') || 'open';
+      var q = NS.sb.from('reports').select('id,reason,details,status,admin_notes,created_at,shops(id,shop_name),products(name),profiles(full_name)').order('created_at', { ascending: false }).limit(200);
+      if (st !== 'all') q = q.eq('status', st);
+      var r = await q; if (r.error) return NS.flash($('msg'), 'danger', NS.errMsg(r.error));
+      $('pane').innerHTML = '<div class="mb-2"><select id="rsf" class="form-select w-auto">' + ['open', 'resolved', 'dismissed', 'all'].map(function (s) { return '<option' + (s === st ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select></div>' +
+        (r.data.length ? r.data.map(function (x) {
+          return '<div class="card p-3 mb-2" data-id="' + E(x.id) + '"><div class="d-flex justify-content-between"><div><strong>' + E(x.shops ? x.shops.shop_name : '?') + '</strong>' + (x.products ? ' &middot; ' + E(x.products.name) : '') +
+            '</div><span class="badge bg-secondary">' + E(x.status) + '</span></div><div class="small text-muted">' + E(x.reason) + ' &middot; by ' + E(x.profiles ? x.profiles.full_name : '?') + ' &middot; ' + E(NS.fmtDate(x.created_at)) + '</div>' +
+            '<div>' + E(x.details || '') + '</div>' + (x.admin_notes ? '<div class="small">Admin: ' + E(x.admin_notes) + '</div>' : '') +
+            (x.status === 'open' ? '<div class="mt-2"><button class="btn btn-sm btn-success r-res">Resolve</button> <button class="btn btn-sm btn-outline-secondary r-dis">Dismiss</button> <a class="btn btn-sm btn-outline-ns" href="shop-details.html?id=' + E(x.shops && x.shops.id) + '">View shop</a></div>' : '') + '</div>';
+        }).join('') : '<div class="text-muted">No reports.</div>');
+      $('rsf').addEventListener('change', function () { $('pane').setAttribute('data-rs', this.value); loaders.reports(); });
+    }
+  };
+  function show(t) { tab = t; document.querySelectorAll('#tabs button').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-tab') === t); }); $('msg').innerHTML = ''; loaders[t](); }
+  $('tabs').addEventListener('click', function (e) { var b = e.target.closest('button[data-tab]'); if (b) show(b.getAttribute('data-tab')); });
+  $('pane').addEventListener('click', async function (e) {
+    var row = e.target.closest('[data-id]'); if (!row) return; var id = row.getAttribute('data-id'), r;
+    if (e.target.closest('.a-ok')) r = await NS.sb.from('shops').update({ verification_status: 'approved', verification_notes: null }).eq('id', id);
+    else if (e.target.closest('.a-no')) { var n = window.prompt('Reason for rejection (shown to the owner):'); if (n === null) return; r = await NS.sb.from('shops').update({ verification_status: 'rejected', verification_notes: n.slice(0, 500) }).eq('id', id); }
+    else if (e.target.closest('.a-del')) { if (!window.confirm('Delete this shop and all its listings?')) return; r = await NS.sb.from('shops').delete().eq('id', id); }
+    else if (e.target.closest('.c-del')) { if (!window.confirm('Delete this category?')) return; r = await NS.sb.from('categories').delete().eq('id', Number(id)); }
+    else if (e.target.closest('.p-del')) { if (!window.confirm('Delete this product from the catalogue and every shop?')) return; r = await NS.sb.from('products').delete().eq('id', id); }
+    else if (e.target.closest('.r-res') || e.target.closest('.r-dis')) {
+      var note = window.prompt('Note (optional):'); if (note === null) return;
+      r = await NS.sb.from('reports').update({ status: e.target.closest('.r-res') ? 'resolved' : 'dismissed', admin_notes: note.slice(0, 500) || null }).eq('id', id);
+    } else return;
+    if (r.error) return NS.flash($('msg'), 'danger', NS.errMsg(r.error));
+    NS.flash($('msg'), 'success', 'Done.'); loaders[tab]();
+  });
+  show('overview');
+})();
+
+</script>
+</body>
+</html>

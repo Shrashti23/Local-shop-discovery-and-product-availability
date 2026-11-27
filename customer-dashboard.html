@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>My Dashboard | NearShop Karnataka</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8F%AA%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="bootstrap.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="visually-hidden-focusable" href="#main">Skip to content</a>
+<div id="ns-nav"></div>
+<main class="container py-4" id="main">
+
+<h1 class="h4 mb-3" data-i18n="nav_dashboard"></h1>
+<div id="msg"></div>
+<div class="card p-3 mb-3"><h2 class="h6" data-i18n="my_profile"></h2>
+  <form id="pf" class="row g-2" novalidate>
+    <div class="col-md-5"><label class="form-label small" for="name" data-i18n="full_name"></label><input id="name" class="form-control" maxlength="120"></div>
+    <div class="col-md-4"><label class="form-label small" for="phone" data-i18n="mobile"></label><input id="phone" class="form-control" inputmode="numeric" maxlength="14"></div>
+    <div class="col-md-3 d-grid align-items-end"><button class="btn btn-ns" data-i18n="save"></button></div>
+    <div class="col-12 small text-muted" id="email"></div>
+  </form></div>
+<h2 class="h5" data-i18n="my_enquiries"></h2><div id="enq" class="mb-4"></div>
+<h2 class="h5">Reports I submitted</h2><div id="rep" class="mb-4"></div>
+<div class="card p-3 border-danger"><div class="small mb-2">Under the DPDP Act you can request erasure of your personal data. This permanently deletes your account, enquiries, reviews and reports.</div>
+<div><button class="btn btn-outline-danger btn-sm" id="del" data-i18n="delete_account"></button></div></div>
+</main>
+<div id="ns-footer"></div>
+<script src="bootstrap.bundle.min.js"></script>
+<script src="supabase.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+<script>
+
+(async function () {
+  var ctx = await NS.init({ active: 'dashboard', roles: ['customer'] });
+  if (!ctx) return;
+  var $ = function (i) { return document.getElementById(i); };
+  $('name').value = ctx.profile.full_name; $('phone').value = ctx.profile.phone || ''; $('email').textContent = ctx.profile.email || '';
+  $('pf').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var n = $('name').value.trim(), p = $('phone').value;
+    if (n.length < 1) return NS.flash($('msg'), 'warning', 'Name is required.');
+    if (p && !NS.validPhone(p)) return NS.flash($('msg'), 'warning', 'Enter a valid 10-digit Indian mobile number.');
+    var r = await NS.sb.from('profiles').update({ full_name: n, phone: p ? NS.normPhone(p) : null }).eq('id', ctx.user.id);
+    NS.flash($('msg'), r.error ? 'danger' : 'success', r.error ? NS.errMsg(r.error) : NS.t('quantity_updated'));
+  });
+  async function load() {
+    var e = await NS.sb.from('enquiries').select('id,message,status,shop_reply,created_at,shops(id,shop_name),products(name)').eq('customer_id', ctx.user.id).order('created_at', { ascending: false }).limit(100);
+    $('enq').innerHTML = (e.data || []).length ? e.data.map(function (x) {
+      return '<div class="card p-3 mb-2"><div class="d-flex justify-content-between"><div><a class="fw-semibold" href="shop-details.html?id=' + NS.esc(x.shops && x.shops.id) + '">' + NS.esc(x.shops && x.shops.shop_name) + '</a>' +
+        (x.products ? ' &middot; ' + NS.esc(x.products.name) : '') + '</div><span class="badge bg-' + (x.status === 'pending' ? 'secondary' : 'success') + '">' + NS.esc(x.status) + '</span></div>' +
+        '<div class="small text-muted">' + NS.esc(NS.fmtDate(x.created_at)) + '</div><div>' + NS.esc(x.message) + '</div>' +
+        (x.shop_reply ? '<div class="mt-2 p-2 bg-light rounded"><strong>' + NS.esc(NS.t('reply')) + ':</strong> ' + NS.esc(x.shop_reply) + '</div>' : '') + '</div>';
+    }).join('') : '<div class="text-muted">-</div>';
+    var r = await NS.sb.from('reports').select('id,reason,details,status,created_at,shops(shop_name)').eq('reporter_id', ctx.user.id).order('created_at', { ascending: false }).limit(50);
+    $('rep').innerHTML = (r.data || []).length ? r.data.map(function (x) {
+      return '<div class="card p-2 mb-2 small"><strong>' + NS.esc(x.shops && x.shops.shop_name) + '</strong> &middot; ' + NS.esc(x.reason) + ' &middot; <span class="badge bg-secondary">' + NS.esc(x.status) + '</span><div>' + NS.esc(x.details || '') + '</div></div>';
+    }).join('') : '<div class="text-muted">-</div>';
+  }
+  load(); NS.onLang(load);
+  $('del').addEventListener('click', async function () {
+    if (!window.confirm('Permanently delete your account and all your data? This cannot be undone.')) return;
+    var r = await NS.sb.rpc('delete_my_account');
+    if (r.error) return NS.flash($('msg'), 'danger', NS.errMsg(r.error));
+    await NS.sb.auth.signOut(); location.href = 'index.html';
+  });
+})();
+
+</script>
+</body>
+</html>

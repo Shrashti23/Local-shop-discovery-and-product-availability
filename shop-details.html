@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shop | NearShop Karnataka</title>
+<meta name="description" content="Check product availability and prices at local shops across Karnataka before you visit.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8F%AA%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="bootstrap.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="visually-hidden-focusable" href="#main">Skip to content</a>
+<div id="ns-nav"></div>
+<main class="container py-4" id="main">
+
+<div id="msg"></div>
+<div id="head" class="card p-3 mb-3 skeleton" data-i18n="loading"></div>
+<div id="mapbox"></div>
+<h2 class="h5 mt-3" data-i18n="products_here"></h2>
+<input id="flt" class="form-control mb-3" data-i18n-ph="filter_products" maxlength="60">
+<div id="inv"></div>
+<h2 class="h5 mt-4" data-i18n="reviews"></h2>
+<div id="revForm"></div><div id="revList"></div>
+</main>
+<div id="ns-footer"></div>
+<script src="bootstrap.bundle.min.js"></script>
+<script src="supabase.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+<script>
+
+(async function () {
+  var ctx = await NS.init({ active: 'shops' });
+  var id = NS.param('id');
+  var $ = function (i) { return document.getElementById(i); };
+  if (!NS.isUuid(id)) { $('head').remove(); return NS.flash($('msg'), 'danger', 'Invalid shop link.'); }
+  var sr = await NS.sb.from('shops').select('id,shop_name,category_focus,address,city,district,pincode,phone,opening_hours,latitude,longitude,verification_status').eq('id', id).eq('verification_status', 'approved').maybeSingle();
+  if (sr.error || !sr.data) { $('head').remove(); return NS.flash($('msg'), 'warning', 'Shop not found or not yet approved.'); }
+  var s = sr.data, inv = [], reviews = [];
+  function drawHead() {
+    var h = $('head'); h.classList.remove('skeleton');
+    h.innerHTML = '<h1 class="h4">' + NS.esc(s.shop_name) + ' <span class="badge bg-success">&#10003; Verified</span></h1>' +
+      '<div class="text-muted">' + NS.esc(s.category_focus || '') + '</div>' +
+      '<div class="mt-2">&#128205; ' + NS.esc(s.address) + ', ' + NS.esc(s.city) + ', ' + NS.esc(s.district) + ' - ' + NS.esc(s.pincode) + '</div>' +
+      '<div>&#128337; ' + NS.esc(s.opening_hours) + '</div>' +
+      '<div class="mt-3 d-flex flex-wrap gap-2"><a class="btn btn-ns" href="tel:+91' + NS.esc(NS.normPhone(s.phone)) + '">&#128222; ' + NS.esc(NS.t('call')) + ' ' + NS.esc(NS.normPhone(s.phone)) + '</a>' +
+      '<button class="btn btn-outline-ns" data-enq="' + NS.esc(s.id) + '|" data-sn="' + NS.esc(s.shop_name) + '" data-pn="">' + NS.esc(NS.t('contact_shop')) + '</button>' +
+      '<a class="btn btn-outline-secondary" target="_blank" rel="noopener noreferrer" href="' + NS.esc(NS.osmUrl(s)) + '">' + NS.esc(NS.t('open_map')) + '</a>' +
+      '<button class="btn btn-outline-danger" data-rep="' + NS.esc(s.id) + '|" data-sn="' + NS.esc(s.shop_name) + '">' + NS.esc(NS.t('report')) + '</button></div>';
+    if (s.latitude !== null && s.longitude !== null) {
+      var la = Number(s.latitude), lo = Number(s.longitude), d = 0.006;
+      $('mapbox').innerHTML = '<iframe class="map-frame" title="Map" loading="lazy" referrerpolicy="no-referrer" src="https://www.openstreetmap.org/export/embed.html?bbox=' +
+        [lo - d, la - d, lo + d, la + d].join('%2C') + '&layer=mapnik&marker=' + la + '%2C' + lo + '"></iframe>';
+    }
+  }
+  function drawInv() {
+    var f = $('flt').value.trim().toLowerCase();
+    var rows = inv.filter(function (r) { return !f || (r.products.name + ' ' + (r.products.brand || '')).toLowerCase().indexOf(f) >= 0; });
+    $('inv').innerHTML = rows.length ? '<div class="table-responsive"><table class="table table-sm bg-white align-middle"><thead><tr><th>' + NS.esc(NS.t('product')) +
+      '</th><th>' + NS.esc(NS.t('price')) + '</th><th>' + NS.esc(NS.t('status')) + '</th><th></th></tr></thead><tbody>' + rows.map(function (r) {
+        var p = r.products, nm = p.name + (p.variant ? ' (' + p.variant + ')' : '');
+        return '<tr><td><a href="product-details.html?id=' + NS.esc(p.id) + '">' + NS.esc(nm) + '</a><div class="small text-muted">' + NS.esc(p.brand || '') + '</div></td>' +
+          '<td>' + NS.esc(NS.inr(r.price)) + '</td><td>' + NS.stockBadge(r) + '<div>' + NS.freshLine(r) + '</div></td>' +
+          '<td><button class="btn btn-sm btn-outline-ns" data-enq="' + NS.esc(s.id) + '|' + NS.esc(p.id) + '" data-sn="' + NS.esc(s.shop_name) + '" data-pn="' + NS.esc(nm) + '">' + NS.esc(NS.t('enquire')) + '</button></td></tr>';
+      }).join('') + '</tbody></table></div>' : '<div class="text-muted">' + NS.esc(NS.t('no_results')) + '</div>';
+  }
+  function drawReviews() {
+    var avg = reviews.length ? (reviews.reduce(function (a, r) { return a + r.rating; }, 0) / reviews.length).toFixed(1) : null;
+    $('revList').innerHTML = (avg ? '<div class="mb-2 fw-semibold">&#11088; ' + avg + ' / 5 (' + reviews.length + ')</div>' : '') +
+      reviews.map(function (r) {
+        return '<div class="card p-2 mb-2"><div>' + '&#11088;'.repeat(r.rating) + ' <span class="small text-muted">' + NS.esc(r.reviewer_name || '') + ' &middot; ' + NS.esc(NS.timeAgo(r.created_at)) + '</span></div>' +
+          (r.comment ? '<div>' + NS.esc(r.comment) + '</div>' : '') + '</div>';
+      }).join('');
+  }
+  function drawReviewForm() {
+    if (!ctx.profile || ctx.profile.role !== 'customer') { $('revForm').innerHTML = ''; return; }
+    $('revForm').innerHTML = '<form id="rf" class="card p-3 mb-3"><div class="fw-semibold mb-2">' + NS.esc(NS.t('write_review')) + '</div>' +
+      '<div class="row g-2"><div class="col-4 col-md-2"><label class="visually-hidden" for="rt">' + NS.esc(NS.t('rating')) + '</label><select id="rt" class="form-select"><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></div>' +
+      '<div class="col-8 col-md-7"><input id="rc" maxlength="500" class="form-control" placeholder="' + NS.esc(NS.t('comment')) + '"></div>' +
+      '<div class="col-12 col-md-3 d-grid"><button class="btn btn-ns">' + NS.esc(NS.t('send')) + '</button></div></div></form>';
+    $('rf').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var r = await NS.sb.from('reviews').upsert({ customer_id: ctx.user.id, shop_id: s.id, rating: Number($('rt').value), comment: $('rc').value.trim() || null }, { onConflict: 'customer_id,shop_id' });
+      if (r.error) return NS.flash($('msg'), 'danger', NS.errMsg(r.error));
+      NS.flash($('msg'), 'success', NS.t('quantity_updated')); loadReviews();
+    });
+  }
+  async function loadReviews() {
+    var r = await NS.sb.from('reviews').select('rating,comment,reviewer_name,created_at').eq('shop_id', s.id).order('created_at', { ascending: false }).limit(50);
+    reviews = r.data || []; drawReviews();
+  }
+  drawHead();
+  var ir = await NS.sb.from('shop_inventory').select(NS.INV_SELECT).eq('shop_id', s.id).order('price', { ascending: true }).limit(500);
+  if (ir.error) NS.flash($('msg'), 'danger', NS.errMsg(ir.error));
+  inv = ir.data || []; drawInv(); drawReviewForm(); loadReviews();
+  $('flt').addEventListener('input', drawInv);
+  NS.onLang(function () { drawHead(); drawInv(); drawReviews(); drawReviewForm(); });
+})();
+
+</script>
+</body>
+</html>

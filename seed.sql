@@ -1,0 +1,83 @@
+-- NearShop Karnataka demo data. Run AFTER schema.sql. Safe to re-run.
+-- All shops are FICTIONAL (prefixed 'Demo') with fake phone numbers 99999000xx.
+-- Remove them with:  delete from public.shops where owner_id is null;
+
+insert into public.shops (id, owner_id, shop_name, category_focus, address, city, district, pincode, phone, opening_hours, latitude, longitude, verification_status, verified_at) values
+('11111111-0000-0000-0000-000000000001', null, 'Demo Fresh Mart', 'Grocery & Staples', '42, 11th Main, Jayanagar 4th Block', 'Bengaluru', 'Bengaluru Urban', '560011', '9999900001', '7:00 AM - 10:00 PM', 12.925, 77.5938, 'approved', now()),
+('11111111-0000-0000-0000-000000000002', null, 'Demo Koramangala Electronics', 'Electronics & Mobile', '80 Feet Road, Koramangala 4th Block', 'Bengaluru', 'Bengaluru Urban', '560034', '9999900002', '10:00 AM - 9:00 PM', 12.9352, 77.6245, 'approved', now()),
+('11111111-0000-0000-0000-000000000003', null, 'Demo Devaraja Stationers', 'Stationery & Books', 'Devaraja Mohalla, Near Market', 'Mysuru', 'Mysuru', '570001', '9999900003', '9:30 AM - 8:30 PM', 12.3052, 76.6552, 'approved', now()),
+('11111111-0000-0000-0000-000000000004', null, 'Demo Mysuru Super Bazaar', 'Grocery & Staples', 'Vontikoppal Main Road', 'Mysuru', 'Mysuru', '570002', '9999900004', '8:00 AM - 9:30 PM', 12.3166, 76.6249, 'approved', now()),
+('11111111-0000-0000-0000-000000000005', null, 'Demo Hampankatta Grocery', 'Grocery & Staples', 'Hampankatta Circle', 'Mangaluru', 'Dakshina Kannada', '575001', '9999900005', '8:00 AM - 9:00 PM', 12.8697, 74.8426, 'approved', now()),
+('11111111-0000-0000-0000-000000000006', null, 'Demo City Electronics Mangaluru', 'Electronics & Mobile', 'Lalbagh Main Road', 'Mangaluru', 'Dakshina Kannada', '575003', '9999900006', '10:00 AM - 8:30 PM', 12.8892, 74.8381, 'approved', now()),
+('11111111-0000-0000-0000-000000000007', null, 'Demo Deshpande Hardware', 'Hardware & Agri', 'Deshpande Nagar Main Road', 'Hubballi', 'Dharwad', '580029', '9999900007', '9:00 AM - 8:00 PM', 15.3647, 75.124, 'approved', now()),
+('11111111-0000-0000-0000-000000000008', null, 'Demo Belagavi Medicals', 'Pharmacy & Health', 'Khade Bazaar', 'Belagavi', 'Belagavi', '590001', '9999900008', '8:00 AM - 10:00 PM', 15.8497, 74.4977, 'approved', now()),
+('11111111-0000-0000-0000-000000000009', null, 'Demo Udupi Stationery Hub', 'Stationery & Books', 'Car Street, Near Krishna Mutt', 'Udupi', 'Udupi', '576101', '9999900009', '9:00 AM - 8:00 PM', 13.3409, 74.7421, 'approved', now()),
+('11111111-0000-0000-0000-000000000010', null, 'Demo Shivamogga Agri Store', 'Hardware & Agri', 'BH Road', 'Shivamogga', 'Shivamogga', '577201', '9999900010', '8:30 AM - 7:30 PM', 13.9299, 75.5681, 'approved', now()),
+('11111111-0000-0000-0000-000000000011', null, 'Demo Kalaburagi Mobiles', 'Electronics & Mobile', 'Super Market, Station Road', 'Kalaburagi', 'Kalaburagi', '585101', '9999900011', '10:00 AM - 9:00 PM', 17.3297, 76.8343, 'approved', now())
+on conflict (id) do nothing;
+
+insert into public.products (id, name, brand, variant, category_id) values
+('22222222-0000-0000-0000-000000000001', 'Sona Masoori Rice', 'Generic', '5 kg', (select id from public.categories where name = 'Grocery & Staples')),
+('22222222-0000-0000-0000-000000000002', 'Basmati Rice', 'India Gate', '5 kg', (select id from public.categories where name = 'Grocery & Staples')),
+('22222222-0000-0000-0000-000000000003', 'Toor Dal', 'Tata Sampann', '1 kg', (select id from public.categories where name = 'Grocery & Staples')),
+('22222222-0000-0000-0000-000000000004', 'Sunflower Oil', 'Fortune', '1 L', (select id from public.categories where name = 'Grocery & Staples')),
+('22222222-0000-0000-0000-000000000005', 'Nandini Toned Milk', 'Nandini', '500 ml', (select id from public.categories where name = 'Grocery & Staples')),
+('22222222-0000-0000-0000-000000000006', 'Fast Charger 25W', 'Samsung', '25W USB-C', (select id from public.categories where name = 'Electronics & Mobile')),
+('22222222-0000-0000-0000-000000000007', 'USB-C Cable', 'Ambrane', '1 m', (select id from public.categories where name = 'Electronics & Mobile')),
+('22222222-0000-0000-0000-000000000008', 'Wireless Earbuds', 'boAt', 'Airdopes 141', (select id from public.categories where name = 'Electronics & Mobile')),
+('22222222-0000-0000-0000-000000000009', 'Power Bank', 'Mi', '10000 mAh', (select id from public.categories where name = 'Electronics & Mobile')),
+('22222222-0000-0000-0000-000000000010', 'Notebook', 'Classmate', '200 pages', (select id from public.categories where name = 'Stationery & Books')),
+('22222222-0000-0000-0000-000000000011', 'Gel Pen', 'Reynolds', 'Pack of 10', (select id from public.categories where name = 'Stationery & Books')),
+('22222222-0000-0000-0000-000000000012', 'Geometry Box', 'Camlin', 'Standard', (select id from public.categories where name = 'Stationery & Books')),
+('22222222-0000-0000-0000-000000000013', 'Paracetamol 500mg', 'Crocin', 'Strip of 15', (select id from public.categories where name = 'Pharmacy & Health')),
+('22222222-0000-0000-0000-000000000014', 'Digital Thermometer', 'Dr Morepen', 'MT-101', (select id from public.categories where name = 'Pharmacy & Health')),
+('22222222-0000-0000-0000-000000000015', 'Hand Sanitizer', 'Dettol', '200 ml', (select id from public.categories where name = 'Pharmacy & Health')),
+('22222222-0000-0000-0000-000000000016', 'Cotton Bedsheet', 'Generic', 'Double', (select id from public.categories where name = 'Clothing & Apparel')),
+('22222222-0000-0000-0000-000000000017', 'Claw Hammer', 'Taparia', '500 g', (select id from public.categories where name = 'Hardware & Agri')),
+('22222222-0000-0000-0000-000000000018', 'LED Bulb', 'Philips', '9W', (select id from public.categories where name = 'Hardware & Agri')),
+('22222222-0000-0000-0000-000000000019', 'Urea Fertilizer', 'IFFCO', '45 kg', (select id from public.categories where name = 'Hardware & Agri')),
+('22222222-0000-0000-0000-000000000020', 'Garden Sprayer', 'Neptune', '16 L', (select id from public.categories where name = 'Hardware & Agri'))
+on conflict (id) do nothing;
+
+insert into public.shop_inventory (shop_id, product_id, quantity, price, last_updated) values
+('11111111-0000-0000-0000-000000000001', '22222222-0000-0000-0000-000000000001', 25, 345, now() - interval '2 hours'),
+('11111111-0000-0000-0000-000000000001', '22222222-0000-0000-0000-000000000002', 12, 520, now() - interval '2 hours'),
+('11111111-0000-0000-0000-000000000001', '22222222-0000-0000-0000-000000000003', 3, 165, now() - interval '5 hours'),
+('11111111-0000-0000-0000-000000000001', '22222222-0000-0000-0000-000000000004', 0, 130, now() - interval '3 hours'),
+('11111111-0000-0000-0000-000000000001', '22222222-0000-0000-0000-000000000005', 40, 29, now() - interval '1 hours'),
+('11111111-0000-0000-0000-000000000004', '22222222-0000-0000-0000-000000000001', 8, 350, now() - interval '30 hours'),
+('11111111-0000-0000-0000-000000000004', '22222222-0000-0000-0000-000000000002', 0, 515, now() - interval '30 hours'),
+('11111111-0000-0000-0000-000000000004', '22222222-0000-0000-0000-000000000003', 30, 160, now() - interval '30 hours'),
+('11111111-0000-0000-0000-000000000004', '22222222-0000-0000-0000-000000000004', 15, 128, now() - interval '30 hours'),
+('11111111-0000-0000-0000-000000000004', '22222222-0000-0000-0000-000000000005', 22, 29, now() - interval '10 hours'),
+('11111111-0000-0000-0000-000000000005', '22222222-0000-0000-0000-000000000001', 10, 350, now() - interval '1 hours'),
+('11111111-0000-0000-0000-000000000005', '22222222-0000-0000-0000-000000000002', 6, 525, now() - interval '1 hours'),
+('11111111-0000-0000-0000-000000000005', '22222222-0000-0000-0000-000000000003', 14, 168, now() - interval '1 hours'),
+('11111111-0000-0000-0000-000000000005', '22222222-0000-0000-0000-000000000004', 9, 132, now() - interval '50 hours'),
+('11111111-0000-0000-0000-000000000002', '22222222-0000-0000-0000-000000000006', 7, 1099, now() - interval '3 hours'),
+('11111111-0000-0000-0000-000000000002', '22222222-0000-0000-0000-000000000007', 20, 199, now() - interval '3 hours'),
+('11111111-0000-0000-0000-000000000002', '22222222-0000-0000-0000-000000000008', 4, 1299, now() - interval '3 hours'),
+('11111111-0000-0000-0000-000000000002', '22222222-0000-0000-0000-000000000009', 0, 999, now() - interval '3 hours'),
+('11111111-0000-0000-0000-000000000006', '22222222-0000-0000-0000-000000000006', 0, 1149, now() - interval '6 hours'),
+('11111111-0000-0000-0000-000000000006', '22222222-0000-0000-0000-000000000007', 15, 189, now() - interval '6 hours'),
+('11111111-0000-0000-0000-000000000006', '22222222-0000-0000-0000-000000000008', 9, 1249, now() - interval '100 hours'),
+('11111111-0000-0000-0000-000000000006', '22222222-0000-0000-0000-000000000009', 12, 1049, now() - interval '6 hours'),
+('11111111-0000-0000-0000-000000000011', '22222222-0000-0000-0000-000000000006', 5, 1079, now() - interval '90 hours'),
+('11111111-0000-0000-0000-000000000011', '22222222-0000-0000-0000-000000000007', 30, 179, now() - interval '90 hours'),
+('11111111-0000-0000-0000-000000000011', '22222222-0000-0000-0000-000000000008', 2, 1349, now() - interval '90 hours'),
+('11111111-0000-0000-0000-000000000003', '22222222-0000-0000-0000-000000000010', 60, 48, now() - interval '4 hours'),
+('11111111-0000-0000-0000-000000000003', '22222222-0000-0000-0000-000000000011', 25, 95, now() - interval '4 hours'),
+('11111111-0000-0000-0000-000000000003', '22222222-0000-0000-0000-000000000012', 10, 85, now() - interval '4 hours'),
+('11111111-0000-0000-0000-000000000009', '22222222-0000-0000-0000-000000000010', 40, 50, now() - interval '20 hours'),
+('11111111-0000-0000-0000-000000000009', '22222222-0000-0000-0000-000000000011', 0, 99, now() - interval '20 hours'),
+('11111111-0000-0000-0000-000000000009', '22222222-0000-0000-0000-000000000012', 6, 80, now() - interval '20 hours'),
+('11111111-0000-0000-0000-000000000008', '22222222-0000-0000-0000-000000000013', 50, 32, now() - interval '2 hours'),
+('11111111-0000-0000-0000-000000000008', '22222222-0000-0000-0000-000000000014', 6, 320, now() - interval '2 hours'),
+('11111111-0000-0000-0000-000000000008', '22222222-0000-0000-0000-000000000015', 35, 95, now() - interval '2 hours'),
+('11111111-0000-0000-0000-000000000007', '22222222-0000-0000-0000-000000000017', 9, 320, now() - interval '12 hours'),
+('11111111-0000-0000-0000-000000000007', '22222222-0000-0000-0000-000000000018', 100, 89, now() - interval '12 hours'),
+('11111111-0000-0000-0000-000000000007', '22222222-0000-0000-0000-000000000020', 3, 1850, now() - interval '12 hours'),
+('11111111-0000-0000-0000-000000000010', '22222222-0000-0000-0000-000000000019', 40, 270, now() - interval '5 hours'),
+('11111111-0000-0000-0000-000000000010', '22222222-0000-0000-0000-000000000020', 5, 1790, now() - interval '5 hours'),
+('11111111-0000-0000-0000-000000000010', '22222222-0000-0000-0000-000000000018', 20, 92, now() - interval '5 hours')
+on conflict (shop_id, product_id) do nothing;
